@@ -296,21 +296,47 @@ void tracers(){
 }
 
 void fade_test(){
-  static float ci = -300;
+  static float zi = -300;
+  static float yi = -300;
+  static float xi = -300;
   static int target = 40;
+  float speed = 0.01;
   CRGB c = CRGB(0,0,0);
-  for (int i = 0; i<NUM_LEDS; i++){
-    float d = (ci - points[i].z);
-    if (abs(d) < target) {
-        float off = target - abs(d);
-        c = CRGB(target+off*2, target+off*2, target);
-        leds[i] = c;
-        Serial.println(points[i].z);
-    } else {
-      leds[i] = CRGB(0,0,0);
+  
+  // z anim  
+  for (int i = 0; i<NUM_LEDS; i++){    
+    float dz = (zi - points[i].z);    
+    if (abs(dz) < target) {
+        float off = target - abs(dz);
+        c = CRGB(0, 0, 255);
+        nblend(leds[i], c, 5);
     }
-    ci = (ci+0.005);
-    if (ci > 350) ci = -350;
+    zi = (zi+speed*1.2);
+    if (zi > 350) zi = -350;
+  }
+
+  // y anim
+  for (int i = 0; i<NUM_LEDS; i++){    
+    float dy = (yi - points[i].y);
+    if (abs(dy) < target) {
+        float off = target - abs(dy);
+        c = CRGB(255, 0, 0);
+        nblend(leds[i], c, 5);
+    }
+    yi = (yi+speed);
+    if (yi > 350) yi = -350;
+  }
+  
+  // x anim
+  for (int i = 0; i<NUM_LEDS; i++){        
+    float dx = (xi - points[i].x);
+    if (abs(dx) < target) {
+        float off = target - abs(dx);
+        c = CRGB(0, 255, 0);
+        nblend(leds[i], c, 5);
+    } 
+    xi = (xi+speed*0.8);
+    if (xi > 350) xi = -350;
   }
   FastLED.show();
 }
