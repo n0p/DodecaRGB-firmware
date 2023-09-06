@@ -1,8 +1,9 @@
 #include <Arduino.h>
-#include <FastLED.h>
-#include <WiFiManager.h>
 #include <cmath>
+#include "FastLED.h"
+#include "Ticker.h"
 #include "points.h"
+#include "network.h"
 
 /*
 
@@ -25,22 +26,11 @@ configurable, as there are many possible configurations.
 In addition, the rotation of each side must be defined, as it can have five possible rotations.
 */
 
-// Timezone config
-/* 
-  Enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
-  See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv for Timezone codes for your region
-  based on https://github.com/SensorsIot/NTP-time-for-ESP8266-and-ESP32/blob/master/NTP_Example/NTP_Example.ino
-*/
-const char* NTP_SERVER = "ch.pool.ntp.org";
-const char* TZ_INFO    = "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00";  // Switzerland
-
-// Wifi
-WiFiManager wm;   // looking for credentials? don't need em! ... google "ESP32 WiFiManager"
 
 // LED configs
-#define BRIGHTNESS  255
+#define BRIGHTNESS  40
 
-#define NUM_COLORS 10
+#define NUM_COLORS 11
 CRGB my_colors[] = {
   CHSV(60, 255, 128),    // Bright yellow
   CHSV(32, 200, 110),    // Radiant orange
@@ -52,135 +42,18 @@ CRGB my_colors[] = {
   CHSV(64, 50, 90),     // Creamy white
   CHSV(31, 140, 90),    // Warm brown
   CHSV(180, 10, 65),       // Cool gray
-  CHSV(80, 50, 65)       // ?
+  CRGB::DarkMagenta,
+  CRGB::DarkBlue
 };
 
 CRGB leds[NUM_LEDS];
-
+#define USER_BUTTON 0
 
 // Constants
 const int LEDS_PER_RING = 10;
 const int LEDS_PER_EDGE = 15;
 
-// Configuration variables (change according to the dodecahedron's arrangement)
-int sideOrder[NUM_SIDES] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-int sideRotation[NUM_SIDES] = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1};
-
-// Time 
-tm timeinfo;
-time_t now;
-int hour = 0;
-int minute = 0;
-int second = 0;
-
-// Time, date, and tracking state
-int t = 0;
-int number = 0;
-int animation=0;
-String formattedDate;
-String dayStamp;
-long millis_offset=0;
-int last_hour=0;
-
-// Days of week. Day 1 = Sunday
-String DoW[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-
-// Months
-String Months[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-
-String getFormattedDate(){
-  char time_output[30];
-  strftime(time_output, 30, "%a  %d-%m-%y", &timeinfo);
-  return String(time_output);
-}
-
-String getFormattedTime(){
-  char time_output[30];
-  strftime(time_output, 30, "%H:%M:%S", &timeinfo);
-  return String(time_output);
-}
-
-void configModeCallback (WiFiManager *myWiFiManager) {
-  Serial.println("Entered config mode");
-  Serial.println(WiFi.softAPIP());
-  Serial.println(wm.getConfigPortalSSID());
-}
-
-bool getNTPtime(int sec) {
-  if (WiFi.isConnected()) {
-    bool timeout = false;
-    bool date_is_valid = false;
-    long start = millis();
-
-    Serial.println(" updating:");
-    configTime(0, 0, NTP_SERVER);
-    setenv("TZ", TZ_INFO, 1);
-
-    do {
-      timeout = (millis() - start) > (1000 * sec);
-      time(&now);
-      localtime_r(&now, &timeinfo);
-      Serial.print(" . ");
-      date_is_valid = timeinfo.tm_year > (2016 - 1900);
-      delay(100);
-      
-      // TODO: show animation
-
-    } while (!timeout && !date_is_valid);
-    
-    if (!date_is_valid){
-      Serial.println("Error: Invalid date received!");
-      Serial.println(timeinfo.tm_year);
-      return false;  // the NTP call was not successful
-    } else if (timeout) {
-      Serial.println("Error: Timeout while trying to update the current time with NTP");
-      return false;
-    } else {
-      Serial.println("\n[ok] time updated: ");
-      Serial.print("System time is now:");
-      Serial.println(getFormattedTime());
-      Serial.println(getFormattedDate());
-      return true;
-    }
-  } else {
-    Serial.println("Error: Update time failed, no WiFi connection!");
-    return false;
-  }
-}
-
-void ConnectToWifi(){
-  Serial.print("Connecting to WiFi");
-  WiFi.mode(WIFI_STA);
-  wm.setAPCallback(configModeCallback);
-
-  //wm.resetSettings();   // uncomment to force a reset
-  bool wifi_connected = wm.autoConnect("ESP32_RGB_Ticker");
-  int t=0;
-  if (wifi_connected){
-    Serial.println();
-    Serial.println("WiFi connected");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("MAC address: ");
-    Serial.println(WiFi.macAddress());
-    Serial.print("RSSI: ");
-    Serial.print(WiFi.RSSI());
-    Serial.println("db");
-
-    delay(1000);
-
-    Serial.println("getting current time...");
-    
-    if (getNTPtime(10)) {  // wait up to 10sec to sync
-      Serial.println("Time sync complete");
-    } else {
-      Serial.println("Error: NTP time update failed!");
-    }
-  } else {
-    Serial.println("ERROR: WiFi connect failure");
-    // update fastled display with error message
-  }
-}
+int mode = 0;
 
 void color_show(){
   // light up all LEDs in sequence
@@ -212,158 +85,301 @@ void color_show(){
 }
 
 void solid_sides(){
-  int start_color = random(NUM_COLORS);
-  for (int s=0; s<NUM_SIDES; s++){
-    for (int level=255; level>50; level-=1){
-      for (int i=s*LEDS_PER_SIDE; i<(s+1)*LEDS_PER_SIDE; i++){
-        CRGB c = my_colors[(start_color + s) % NUM_COLORS];
-        leds[i] = c.fadeToBlackBy(level);;
-      }
-      FastLED.show();
-      if (digitalRead(0) == LOW) break;
-      delay(2);
+  static int s=0;
+  if (random(12)==0) { s = random(NUM_SIDES); };
+  CRGB c = CHSV(millis()/random(100,110) % 255, 250, 220);
+  for (int level=0; level<50; level+=1){
+    for (int i=s*LEDS_PER_SIDE; i<(s+1)*LEDS_PER_SIDE; i++){
+      nblend(leds[i], c, 6);
     }
-    if (digitalRead(0) == LOW) break;
-    delay(300);    
-    for (int level=50; level<255; level+=1){
-      for (int i=(s+1)*LEDS_PER_SIDE; i<(s+2)*LEDS_PER_SIDE; i++){
-        CRGB c = my_colors[(start_color + s + 1) % NUM_COLORS];
-        leds[i] = c.fadeToBlackBy(level);
-      }
-      FastLED.show();
-      if (digitalRead(0) == LOW) break;
-      delay(2);
+    FastLED.show();
+    if (digitalRead(0) == LOW) return;
+    delayMicroseconds(100);
+  } 
+  for (int level=100; level>0; level--){
+    for (int i=(s)*LEDS_PER_SIDE; i<(s+1)*LEDS_PER_SIDE; i++){
+      nblend(leds[i], CHSV(millis()/random(100,110) % 255, 250, random(50)+150), 1);
     }
+    FastLED.show();
+    if (digitalRead(0) == LOW) return;
+    delayMicroseconds(100);
   }
+  FastLED.show();
+  s = (s+1) % NUM_SIDES;
 }
 
+// randomly light up LEDs and fade them out individually, like raindrops
+int fade_level = 0;
 void flash_fade_points(){
-  // randomly light up LEDs and fade them out individually, like raindrops
-  static float add_strength = 10.0;
-  if (true){
-    for (int n=0; n<12; n++){
-      CRGB c = CRGB(
-          (sin(millis()/3000.0) + 1.0) * add_strength,
-          (cos(millis()/7000.0) + 1.0) * add_strength,
-          (sin(millis()/5000.0) + 1.0) * add_strength*0.8
-        );
-      if (random(2)==1){
-        int r1 = random(n*LEDS_PER_SIDE+1, (n+1)*LEDS_PER_SIDE+10);
-        int r2 = random(n*LEDS_PER_SIDE+11, (n+1)*LEDS_PER_SIDE+26);
-        leds[r1] += c; 
-        leds[r2] += c;
-        if (random(10) == 0){
-          leds[n*LEDS_PER_SIDE] += c.fadeToBlackBy(50);
-        }
-      }
+  // cycle color over time
+  CRGB c = CRGB(
+    sin8_C((millis()/500)%255),
+    sin8_C((millis()/400)%255),
+    sin8_C((millis()/300)%255)
+  ); 
+  fade_level = sin8_C((millis()/600)%255);
+  for (int n=0; n<12; n++){
+    // central LED
+    if (random(35) == 0) nblend(leds[n*LEDS_PER_SIDE], c, map(fade_level, 0, 255, 8, 30));
+    // ring LEDs
+    if (random(4) == 0) {
+      int r1 = random(n*LEDS_PER_SIDE+1, (n+1)*LEDS_PER_SIDE+10);        
+      nblend(leds[r1], c, map(fade_level, 0, 255, 30, 60));
+    }
+    // edge LEDs
+    if (random(2) == 0) {
+      int r2 = random(n*LEDS_PER_SIDE+11, (n+1)*LEDS_PER_SIDE+26);
+      nblend(leds[r2], c,map(fade_level, 0, 255, 30, 60));  
     }
   }
   for (int i = 0; i < NUM_LEDS; i++){
-    if (true){
-      int l = leds[i].getLuma();
-      leds[i].fadeToBlackBy(max(1,l/4));
-    }
+    if (random(350) < fade_level+2) leds[i].fadeToBlackBy(map(fade_level, 0, 255, 50, 30));
   }
   FastLED.show();   
-  delay(20);  
+  delay(1);  
 }
 
 
-// Function to calculate the closest LED number
-int setPixel(double a, double c) {
-  int ledNumber = 0;
-  return ledNumber;
-
-}
-
-float xr,yr = 0;
-void tracers(){
-    FastLED.clear();
-    int led = setPixel(xr,yr);
-    leds[led] = CRGB::GreenYellow;
-    Serial.print("LED:");
-    Serial.println(led);
-    // print the xy,yr,zr to serial
-    Serial.print("x:");
-    Serial.print(xr);
-    Serial.print(" y:");
-    Serial.println(yr);  
+float calculateDistance(float x1, float y1, float z1, float x2, float y2, float z2) {
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float dz = z2 - z1;
+    return sqrt(dx*dx + dy*dy + dz*dz);
     
-    xr = fmod(xr+ 0.1, 2*PI);
-    yr = fmod(yr+ 0.1, 2*PI);
-    FastLED.show();
-    delay(300);
+}
+
+/* 
+Blobs are points that orbit a sphere at given radius. 
+As they orbit, they leave a trail of color behind them.
+Each blob has a color, and a radius.
+They also have velocity in the A and C angles.
+Every loop, the angles are updated by the velocity by calling the tick() function
+*/
+class Blob {
+  public:
+    int sphere_r = 290; // radius of sphere the blob orbits
+    int radius; // radius of blob
+    float a,c = 0;  // polar angles
+    float av;  // velocity of angles in radians
+    float cv;  // velocity of angles in radians
+    const float max_accel = 0.04;
+    long age;
+    long lifespan;
+
+    CRGB color;
+
+  Blob(){
+    this->reset();
+  }
+
+  void reset(){
+    this-> lifespan = random(30000+4000);
+    this->av = 0;
+    this->cv = 0;
+    this->a = random(TWO_PI);  // rotation angle of blob
+    this->c = random(TWO_PI);  // elevation angle of blob
+    this->applyForce(random(50,200)/1000.0, random(50, 200)/1000.0);
+    this->color = CHSV((millis()/1000)%255, 250, 200+random(50));
+    this->radius = random(50,130);
+    this->age = 0;
+    this->lifespan = random(3000)+3000;
+  }
+
+  int x(){ return sphere_r * sin(c)*cos(a); }
+  int y(){ return sphere_r * sin(c)*sin(a); }
+  int z(){ return sphere_r * cos(c); }
+
+  void applyForce(float a, float c){
+    this->av += a;
+    this->av = constrain(this->av, max_accel*-1, max_accel);
+    this->cv += c;
+    this->cv = constrain(this->cv, max_accel/2*-1, max_accel/2);
+  }
+
+  void tick(){
+    // animate angles with velocity
+    this->age++;
+    this->a += av;
+    this->c += cv;
+    if (random(500)==1){
+      float ar = random(5,50)/2000.0 * (random(2)==1 ? 1 : -1);
+      float cr = random(5,50)/2000.0 * (random(2)==1 ? 1 : -1);
+      this->applyForce(ar, cr);
+    }
+    if (this->lifespan - this->age < 100){
+      this->radius *= 0.95;
+    }
+    if (this->lifespan - this->age < 255){
+      this->color.fadeToBlackBy(1);
+    }
+    if (this->age > this->lifespan){
+      this->reset();
+    }
+  }
+};
+
+#define NUM_BLOBS 4
+Blob *blobs[NUM_BLOBS];
+
+void orbiting_blobs(){
+  
+  // // the point on the sphhere
+  // float x1 = r * sin(c)*cos(a);
+  // float y1 = r * sin(c)*sin(a);
+  // float z1 = r * cos(c);
+  
+  for (int i = 0; i<NUM_LEDS; i++){ 
+    for (int b=0; b<NUM_BLOBS; b++){
+      float dist = calculateDistance(
+                      points[i].x, blobs[b]->x(), 
+                      points[i].y, blobs[b]->y(), 
+                      points[i].z, blobs[b]->z()
+                    );
+      if (abs(dist) < blobs[b]->radius){
+        CRGB c = blobs[b]->color;
+        if (blobs[b]->age < 255){
+          c.fadeToBlackBy(255 - blobs[b]->age);
+        }
+        nblend(leds[i], c, map(abs(dist), 0, blobs[b]->radius, 0, 60));
+        // leds[i] = CHSV(blobs[b]->color, 255, 255-dist);
+      }
+    }
+    leds[i].fadeToBlackBy(6);
+  }
+  FastLED.show();
+  for (int b=0; b<NUM_BLOBS; b++){
+    blobs[b]->tick();
+  }
+  //Serial.println(blobs[0]->a);
 }
 
 void fade_test(){
-  static float zi = -300;
-  static float yi = -300;
-  static float xi = -300;
-  static int target = 40;
-  float speed = 0.01;
+  static float max_range = 500;
+  static float zi = -max_range;
+  static float yi = -max_range;
+  static float xi = -max_range;
+  static float target = 140;
+  static int counter = 0;
+  float speed = 0.02;
   CRGB c = CRGB(0,0,0);
+  int blend = 128;
+
+  FastLED.clear();
   
-  // z anim  
   for (int i = 0; i<NUM_LEDS; i++){    
-    float dz = (zi - points[i].z);    
+    // z anim  
+    float dz = (zi - points[i].z);
+    target = 140+sin(counter/700.0)*130;
+    target = constrain(target, 20, 260);
     if (abs(dz) < target) {
         float off = target - abs(dz);
-        c = CRGB(0, 0, 255);
-        nblend(leds[i], c, 5);
+        c = CRGB(0, 0, map(off, 0, target, 0, 255));
+        nblend(leds[i], c, blend);
     }
-    zi = (zi+speed*1.2);
-    if (zi > 350) zi = -350;
-  }
+    zi = (zi+speed*cos(counter/2000.0)*2);
+    zi = constrain(zi, -max_range, max_range);
+    if (abs(zi)==max_range) zi=-zi;
 
-  // y anim
-  for (int i = 0; i<NUM_LEDS; i++){    
+    // y anim
     float dy = (yi - points[i].y);
     if (abs(dy) < target) {
         float off = target - abs(dy);
-        c = CRGB(255, 0, 0);
-        nblend(leds[i], c, 5);
+        c = CRGB(map(off, 0, target, 0, 255), 0, 0);
+        nblend(leds[i], c, blend);
     }
-    yi = (yi+speed);
-    if (yi > 350) yi = -350;
-  }
+    yi = (yi+speed*constrain(tan(counter/1600.0)/4, -3, 3));
+    yi = constrain(yi, -max_range, max_range);
+    if (abs(yi)==max_range) yi=-yi;
   
-  // x anim
-  for (int i = 0; i<NUM_LEDS; i++){        
+    // x anim
     float dx = (xi - points[i].x);
     if (abs(dx) < target) {
         float off = target - abs(dx);
-        c = CRGB(0, 255, 0);
-        nblend(leds[i], c, 5);
+        c = CRGB(0, map(off, 0, target, 0, 255), 0);
+        nblend(leds[i], c, blend);
     } 
-    xi = (xi+speed*0.8);
-    if (xi > 350) xi = -350;
+    xi = (xi+speed*sin(counter/4000.0)*2);
+    xi = constrain(xi, -max_range, max_range);
+    if (abs(xi)==max_range) xi=-xi;
   }
   FastLED.show();
+  counter++;
 }
+
+void timerStatusMessage(){
+  Serial.printf("FPS: %d\n", FastLED.getFPS());
+  if (mode==0){
+    Serial.printf("Blob age: %d/%d\n", blobs[0]->age, blobs[0]->lifespan);
+    Serial.printf("Blob av/cv: %0.4f %0.4f\n", blobs[0]->av, blobs[0]->cv);
+  }
+  if (mode==2){
+    Serial.printf("Fade level: %d\n", fade_level);  
+  }
+}
+Ticker timer1;
+
 
 void setup() {
   // set up fastled
   Serial.begin(115200);
   FastLED.addLeds<WS2812B, 5, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
+  FastLED.setDither(0);
+  FastLED.clear();
+  FastLED.show();
+
+  for (int side=0; side<NUM_SIDES; side++){
+    leds[side*LEDS_PER_SIDE] = my_colors[side];
+  }
+  FastLED.show();
+  delay(300);
+
+  for (int b=0; b<NUM_BLOBS; b++){
+    blobs[b] = new Blob();
+    blobs[b]->color = CRGB(random(255), random(255), random(255));
+  }
 
   pinMode(0, INPUT_PULLUP);
-  // ConnectToWifi();
-  //news = fetchHeadlines();
+
+  for (int i=1; i<11; i++){    
+    for (int side=0; side<NUM_SIDES; side++){
+      leds[side*LEDS_PER_SIDE+i] = my_colors[side];
+    }
+    FastLED.show();
+    delay(50);
+  }
+
+  bool config_wifi = (digitalRead(USER_BUTTON) == LOW);
+  bool connected = ConnectToWifi(config_wifi);
+
+  // flash green if connected, or red if not
+  for (int x=0; x<40; x++){
+    int level = 150 - abs(map(x, 0,  40, -150, 150));
+    CRGB c =  (connected ? CRGB(0,level,0) : CRGB(level,0,0));
+    FastLED.showColor(c);
+    FastLED.show();
+    delayMicroseconds(500);
+  }
+  FastLED.setDither(0);
+  FastLED.clear();
+  FastLED.show();
+
   delay(500);
   Serial.println("Start");
+  timer1.attach(3, timerStatusMessage);
+
+  mode = 4;
 }
 
 
-int mode = 0;
 void loop() {
-
-  if (digitalRead(0) == LOW){
+  // handle button press for mode change
+  if (digitalRead(USER_BUTTON) == LOW){
     Serial.print("Button pressed, changing mode to ");
-    mode = (mode + 1) % 4;
+    mode = (mode + 1) % 5;
     Serial.println(mode);
  
-    while (digitalRead(0) == LOW){
+    while (digitalRead(USER_BUTTON) == LOW){
       CRGB c = CRGB::White;
       FastLED.setBrightness(BRIGHTNESS);
       c.setHSV(millis()/20 % 255, 255, 128);
@@ -374,16 +390,18 @@ void loop() {
     Serial.println("Button released");
   }
   if (mode == 0){
-    fade_test();
+    orbiting_blobs();
   }
   if (mode == 1){
-    flash_fade_points();
+    fade_test();
   }
   if (mode == 2){
-    color_show();    
+    flash_fade_points();
   }
   if (mode==3){
     solid_sides();
   }
-  
+  if (mode==4){
+    color_show();
+  }
 }
