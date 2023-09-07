@@ -13,7 +13,6 @@ ColorPalette::ColorPalette(const char *name, std::array<CRGB, 6> colors) {
 };
 
 const int paletteCount = 7;
-
 ColorPalette *palettes[paletteCount];
 
 void initPalettes() {

@@ -4,28 +4,35 @@
 #include "Ticker.h"
 #include "points.h"
 #include "network.h"
+#include "blob.h"
+#include "particle.h"
 
 /*
 
-We have a dodecahedron with 12 sides. 
+We have a dodecahedron model with 12 sides. 
 Each side is a pentgon-shaped PCB circuit board with RGB LEDs arranged on them, spaced evenly. 
+
 An ESP32 is used to control the LEDs, using the Arduino environment and FastLED library.
+
 Each pentagon side contains 26 RGB leds on a circuit board, arranged in the following way:
 - 1 central LED in the exact middle of each side
 - a ring of 10 LEDs in a circle around the central LED
 - 15 LEDs around the edges, in groups of 3, spaced evenly around the edge of the pentagon
+
 The LEDs on each face of the dodecahedron are wired in series so that the central LED is first, 
 the ring LEDs come next, and the edge LEDs after that. 
-Each side connects to the next, in series. 
-We need to define a C++ function called "setPixel(xr,yr)" which takes two angles in radians 
-and returns the best matching LED number. 
-The dodecahedron has 12 sides. The code should calculate which side is needed based on the angle and configuration. 
-If side 0 has pixels 1 to 26, then side 1 would have pixels 27 to 52, and so on. 
-As the PCB circuit boards are wired together to form the dodecahedron, the arrangement of the sides must be 
-configurable, as there are many possible configurations. 
-In addition, the rotation of each side must be defined, as it can have five possible rotations.
-*/
 
+Each side connects to the next, in series, for a grand total of 312 LEDs. 
+
+As the PCB circuit boards are wired together to form the dodecahedron, the arrangement of the sides must be 
+defined, as there are many possible configurations. 
+In addition, the rotation of each side must be defined, as it can have five possible rotations.
+
+There's a processing sketch at https://github.com/somebox/dodeca-rgb-simulator that generates the list
+of points, the X,Y,Z coordinates, and defines the order of the sides and their rotations. It also
+renders an interactive 3D model of the dodecahedron.
+
+*/
 
 // LED configs
 #define BRIGHTNESS  40
@@ -140,83 +147,12 @@ void flash_fade_points(){
 }
 
 
-float calculateDistance(float x1, float y1, float z1, float x2, float y2, float z2) {
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float dz = z2 - z1;
-    return sqrt(dx*dx + dy*dy + dz*dz);
-    
+float calculateBlobDistance(LED_Point p1, Blob *b) {
+  float dx = p1.x - b->x();
+  float dy = p1.y - b->y();
+  float dz = p1.z - b->z();
+  return sqrt(dx*dx + dy*dy + dz*dz);  
 }
-
-/* 
-Blobs are points that orbit a sphere at given radius. 
-As they orbit, they leave a trail of color behind them.
-Each blob has a color, and a radius.
-They also have velocity in the A and C angles.
-Every loop, the angles are updated by the velocity by calling the tick() function
-*/
-class Blob {
-  public:
-    int sphere_r = 290; // radius of sphere the blob orbits
-    int radius; // radius of blob
-    float a,c = 0;  // polar angles
-    float av;  // velocity of angles in radians
-    float cv;  // velocity of angles in radians
-    const float max_accel = 0.04;
-    long age;
-    long lifespan;
-
-    CRGB color;
-
-  Blob(){
-    this->reset();
-  }
-
-  void reset(){
-    this-> lifespan = random(30000+4000);
-    this->av = 0;
-    this->cv = 0;
-    this->a = random(TWO_PI);  // rotation angle of blob
-    this->c = random(TWO_PI);  // elevation angle of blob
-    this->applyForce(random(50,200)/1000.0, random(50, 200)/1000.0);
-    this->color = CHSV((millis()/1000)%255, 250, 200+random(50));
-    this->radius = random(50,130);
-    this->age = 0;
-    this->lifespan = random(3000)+3000;
-  }
-
-  int x(){ return sphere_r * sin(c)*cos(a); }
-  int y(){ return sphere_r * sin(c)*sin(a); }
-  int z(){ return sphere_r * cos(c); }
-
-  void applyForce(float a, float c){
-    this->av += a;
-    this->av = constrain(this->av, max_accel*-1, max_accel);
-    this->cv += c;
-    this->cv = constrain(this->cv, max_accel/2*-1, max_accel/2);
-  }
-
-  void tick(){
-    // animate angles with velocity
-    this->age++;
-    this->a += av;
-    this->c += cv;
-    if (random(500)==1){
-      float ar = random(5,50)/2000.0 * (random(2)==1 ? 1 : -1);
-      float cr = random(5,50)/2000.0 * (random(2)==1 ? 1 : -1);
-      this->applyForce(ar, cr);
-    }
-    if (this->lifespan - this->age < 100){
-      this->radius *= 0.95;
-    }
-    if (this->lifespan - this->age < 255){
-      this->color.fadeToBlackBy(1);
-    }
-    if (this->age > this->lifespan){
-      this->reset();
-    }
-  }
-};
 
 #define NUM_BLOBS 4
 Blob *blobs[NUM_BLOBS];
@@ -230,11 +166,7 @@ void orbiting_blobs(){
   
   for (int i = 0; i<NUM_LEDS; i++){ 
     for (int b=0; b<NUM_BLOBS; b++){
-      float dist = calculateDistance(
-                      points[i].x, blobs[b]->x(), 
-                      points[i].y, blobs[b]->y(), 
-                      points[i].z, blobs[b]->z()
-                    );
+      float dist = calculateBlobDistance(points[i], blobs[b]);
       if (abs(dist) < blobs[b]->radius){
         CRGB c = blobs[b]->color;
         if (blobs[b]->age < 255){
@@ -319,6 +251,24 @@ void timerStatusMessage(){
 Ticker timer1;
 
 
+#define NUM_PARTICLES 10
+Particle *particles[NUM_PARTICLES];
+void wandering_particles(){
+  for (int p=0; p<NUM_PARTICLES; p++){
+    particles[p]->tick();
+    // loop through path and light up LEDs a little bit with nblend
+    int led = particles[p]->led_number;
+    nblend(leds[led], particles[p]->color, 500/particles[p]->hold_time);
+  }
+  for (int i=0; i<NUM_LEDS; i++){
+    if (random(100)<10) continue;
+    leds[i].fadeToBlackBy(10);
+  }
+  FastLED.show();
+  delay(2);
+}
+
+
 void setup() {
   // set up fastled
   Serial.begin(115200);
@@ -334,12 +284,19 @@ void setup() {
   FastLED.show();
   delay(300);
 
+  // init Blobs
   for (int b=0; b<NUM_BLOBS; b++){
     blobs[b] = new Blob();
     blobs[b]->color = CRGB(random(255), random(255), random(255));
   }
+  // init Particles
+  for (int p=0; p<NUM_PARTICLES; p++){
+    particles[p] = new Particle();
+    particles[p]->color = CRGB(random(200), 100+random(150), random(200));
+  }
 
   pinMode(0, INPUT_PULLUP);
+
 
   for (int i=1; i<11; i++){    
     for (int side=0; side<NUM_SIDES; side++){
@@ -369,7 +326,9 @@ void setup() {
   timer1.attach(3, timerStatusMessage);
 
   mode = 4;
+
 }
+
 
 
 void loop() {
@@ -402,6 +361,6 @@ void loop() {
     solid_sides();
   }
   if (mode==4){
-    color_show();
+    wandering_particles();
   }
 }
