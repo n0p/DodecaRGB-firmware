@@ -36,6 +36,8 @@ renders an interactive 3D model of the dodecahedron.
 
 // LED configs
 #define BRIGHTNESS  40
+#define LED_PIN 5
+#define WIFI_ENABLED false
 
 #define NUM_COLORS 11
 CRGB my_colors[] = {
@@ -272,7 +274,7 @@ void wandering_particles(){
 void setup() {
   // set up fastled
   Serial.begin(115200);
-  FastLED.addLeds<WS2812B, 5, GRB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.setDither(0);
   FastLED.clear();
@@ -306,8 +308,13 @@ void setup() {
     delay(50);
   }
 
+  #ifdef WIFI_ENABLED
+  // connect to wifi
   bool config_wifi = (digitalRead(USER_BUTTON) == LOW);
   bool connected = ConnectToWifi(config_wifi);
+  #else
+  bool connected = true;
+  #endif
 
   // flash green if connected, or red if not
   for (int x=0; x<40; x++){
