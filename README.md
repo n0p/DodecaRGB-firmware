@@ -24,6 +24,8 @@ Each side connects to the next, in series, for a grand total of 312 LEDs. There 
 
 Keep in mind the power requirements, which can exceed 10-15 watts at full brightness, and might exceed laptop USB or low-performance powerbanks, leading to brownouts and reboots. To combat this, you can set the global brightness with the BRIGHTNESS constant in the code. In testing, a lower setting of 40 (0-255) is perfectly usable in normal room lighting. At full brighness you will need to inject 5v power to a couple of boards (and probably wear sunglasses as well).
 
+[3d view of the object](3d-models/dodecaRGB-from-processing.stl)
+
 ## Assembly
 
 As the PCB circuit boards are wired together in series, and each PCB has in and out connection points along the side, labelled with letter codes A-E. The specific arrangement of the sides must be followed, as there are many possible configurations. Using the [simulator](https://github.com/somebox/dodeca-rgb-simulator) you can see how the boards fit together (an assembly video is planned).
@@ -77,8 +79,15 @@ Note that in all software and docs, side 0 is the bottom, and side 11 is the top
 - side 9 out 24,25,26 (A)to side 10 IN 15,16,17 (E)
 - side 10 out 12,13,14 (B) to side 11 (top) IN 21,22,23 (E)
 
-![PCB top](images/pcb-detail-top.jpeg)
-![PCB bottom](images/pcb-detail-bottom.jpeg)
+#### Connection flow
+
+<img height="400" src="images/connections-bottom.jpg"></img>
+<img height="400" src="images/connections-top.jpg"></img>
+
+#### PCB details
+
+<img height="400" src="images/pcb-detail-top.jpeg"></img>
+<img height="400" src="images/pcb-detail-bottom.jpeg"></img>
 
 ## Notes
 
@@ -92,8 +101,8 @@ Once the model is assembled and working, the ESP32 can be connected to a small U
 
 Included in this repo is an [STL file](3d-models/d12-corner.stl) for printing the 12 small corner pieces that connect the PCBs at the correct angles with M3 screws. The image below shows the recommended print bed orientation. The printed holes are slightly small so M3 screws can be inserted with a friction fit.
 
-![corner piece STL](images/corner-stl.jpeg)
-![corner slicing profile](images/corner-slicing.jpeg)
+<img height="450" src="images/corner-stl.jpeg" />
+<img height="450" src="images/corner-slicing.jpeg" />
 
 ## Software
 
@@ -109,7 +118,7 @@ There's a processing sketch at https://github.com/somebox/dodeca-rgb-simulator t
 of points, the X,Y,Z coordinates, and defines the order of the sides and their rotations. It also
 renders an interactive 3D model of the dodecahedron with different views, and makes it easier to visualize how the boards are lined up inside.
 
-<img src="https://user-images.githubusercontent.com/7750/264390630-26a079d8-aabb-4b0e-907a-5e34e593b98c.png" />
+<img  src="https://user-images.githubusercontent.com/7750/264390630-26a079d8-aabb-4b0e-907a-5e34e593b98c.png" />
 
 ## Todo and Ideas
 
