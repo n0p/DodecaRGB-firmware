@@ -105,7 +105,9 @@ The [simulator](https://github.com/somebox/dodeca-rgb-simulator) calculates wher
 
 There's a processing sketch at https://github.com/somebox/dodeca-rgb-simulator that generates the list
 of points, the X,Y,Z coordinates, and defines the order of the sides and their rotations. It also
-renders an interactive 3D model of the dodecahedron.
+renders an interactive 3D model of the dodecahedron with different views, and makes it easier to visualize how the boards are lined up inside.
+
+<img src="https://user-images.githubusercontent.com/7750/264390630-26a079d8-aabb-4b0e-907a-5e34e593b98c.png" />
 
 ## Todo and Ideas
 
