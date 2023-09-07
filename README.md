@@ -2,7 +2,7 @@
 
 This is the firmware for DodecaRGB, a colorful DIY IoT model 12-sided shape made from PCB circuit boards adorned with bright LEDs. It can be assembled as a desktop light, or built with a battery pack and motion sensors for reactive animations and games. 
 
-![DodecaRGB](../images/hero.jpeg)
+![DodecaRGB](images/hero.jpeg)
 
 ## Hardware 
 
@@ -28,7 +28,7 @@ As the PCB circuit boards are wired together in series, and each PCB has in and 
 
 Note that in all software and docs, side 0 is the bottom, and side 11 is the top.
 
-![connectors and corners](../images/internal.jpeg)
+![connectors and corners](images/internal.jpeg)
 
 ### Parts and Tools required for assembly
 - 12 DodecaRGB PCBs
@@ -55,7 +55,7 @@ Note that in all software and docs, side 0 is the bottom, and side 11 is the top
 1. connect the second JHT cable to the input at side 0, and connect (or solder) the other end of the wire to your EPS32 board. The default data pin for LEDs is pin 5 on the ESP (can be changed).
 1. flash the ESP32 with this firmware, configure WIFI, and get started
 
-![the two halves](../images/two-halves.jpeg)
+![the two halves](images/two-halves.jpeg)
 
 
 ### PCB connection points:
@@ -74,8 +74,8 @@ Note that in all software and docs, side 0 is the bottom, and side 11 is the top
 - side 9 out 24,25,26 (A)to side 10 IN 15,16,17 (E)
 - side 10 out 12,13,14 (B) to side 11 (top) IN 21,22,23 (E)
 
-![PCB top](../images/pcb-detail-top.jpeg)
-![PCB bottom](../images/pcb-detail-bottom.jpeg)
+![PCB top](images/pcb-detail-top.jpeg)
+![PCB bottom](images/pcb-detail-bottom.jpeg)
 
 ## Notes
 
@@ -89,8 +89,8 @@ Once the model is assembled and working, the ESP32 can be connected to a small U
 
 Included in this repo is an [STL file](../3d-models/d12-corner.stl) for printing the 12 small corner pieces that connect the PCBs at the correct angles with M3 screws. The image below shows the recommended print bed orientation. The printed holes are slightly small so M3 screws can be inserted with a friction fit.
 
-![corner piece STL](../images/corner-stl.jpeg)
-![corner slicing profile](../images/corner-slicing.jpeg)
+![corner piece STL](images/corner-stl.jpeg)
+![corner slicing profile](images/corner-slicing.jpeg)
 
 ## Software
 
