@@ -29,6 +29,7 @@ As the PCB circuit boards are wired together in series, and each PCB has in and 
 Note that in all software and docs, side 0 is the bottom, and side 11 is the top.
 
 ![connectors and corners](images/internal.jpeg)
+![closeup of 3-pin header connection near a corner](images/header-closeup.jpeg)
 
 ### Parts and Tools required for assembly
 - 12 DodecaRGB PCBs
