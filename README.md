@@ -35,7 +35,7 @@ Note that in all software and docs, side 0 is the bottom, and side 11 is the top
 
 ### Parts and Tools required for assembly
 - 12 DodecaRGB PCBs
-- 20 3d-printed [corner pieces](../3d-models/d12-corner.stl)
+- 20 3d-printed [corner pieces](3d-models/d12-corner.stl)
 - 60 M3 screws (~6mm long) and the appropriate screwdriver
 - board-to-board interconnections: ~15-20cm 3 wire cable (22-22 AWG, solid core is easier to solder) .. or standard male 3p pin headers, bent at angles (see notes below)
 - ESP32 (WROOM, WROVER, ESP32-S3 probably works as well)
@@ -90,7 +90,7 @@ Once the model is assembled and working, the ESP32 can be connected to a small U
 
 ### 3D-Printed Parts
 
-Included in this repo is an [STL file](../3d-models/d12-corner.stl) for printing the 12 small corner pieces that connect the PCBs at the correct angles with M3 screws. The image below shows the recommended print bed orientation. The printed holes are slightly small so M3 screws can be inserted with a friction fit.
+Included in this repo is an [STL file](3d-models/d12-corner.stl) for printing the 12 small corner pieces that connect the PCBs at the correct angles with M3 screws. The image below shows the recommended print bed orientation. The printed holes are slightly small so M3 screws can be inserted with a friction fit.
 
 ![corner piece STL](images/corner-stl.jpeg)
 ![corner slicing profile](images/corner-slicing.jpeg)
