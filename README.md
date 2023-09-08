@@ -77,7 +77,7 @@ Note that in all software and docs, side 0 is the bottom, and side 11 is the top
 - side 7 out 24,25,26 (A)to side 8 IN 15,16,17 (C)
 - side 8 out 24,25,26 (A)to side 9 IN 15,16,17 (C)
 - side 9 out 24,25,26 (A)to side 10 IN 15,16,17 (E)
-- side 10 out 12,13,14 (B) to side 11 (top) IN 21,22,23 (E)
+- side 10 out 18,19,20 (D) to side 11 (top) IN 21,22,23 (E)
 
 #### Connection flow
 
