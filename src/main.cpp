@@ -35,9 +35,10 @@ renders an interactive 3D model of the dodecahedron.
 */
 
 // LED configs
-#define BRIGHTNESS  40
+#define BRIGHTNESS  75
 #define LED_PIN 0
 #define WIFI_ENABLED false
+#define USER_BUTTON 9
 
 #define NUM_COLORS 11
 CRGB my_colors[] = {
@@ -56,7 +57,6 @@ CRGB my_colors[] = {
 };
 
 CRGB leds[NUM_LEDS];
-#define USER_BUTTON 0
 
 // Constants
 const int LEDS_PER_RING = 10;
@@ -297,7 +297,7 @@ void setup() {
     particles[p]->color = CRGB(random(200), 100+random(150), random(200));
   }
 
-  pinMode(0, INPUT_PULLUP);
+  pinMode(USER_BUTTON, INPUT_PULLUP);
 
 
   for (int i=1; i<11; i++){    
