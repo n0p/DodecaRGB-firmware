@@ -3,7 +3,7 @@
 #include "FastLED.h"
 #include "Ticker.h"
 #include "points.h"
-#include "network.h"
+//#include "network.h"
 #include "blob.h"
 #include "particle.h"
 
@@ -36,7 +36,7 @@ renders an interactive 3D model of the dodecahedron.
 
 // LED configs
 #define BRIGHTNESS  40
-#define LED_PIN 5
+#define LED_PIN 0
 #define WIFI_ENABLED false
 
 #define NUM_COLORS 11
@@ -307,7 +307,7 @@ void setup() {
     FastLED.show();
     delay(50);
   }
-
+/*
   #ifdef WIFI_ENABLED
   // connect to wifi
   bool config_wifi = (digitalRead(USER_BUTTON) == LOW);
@@ -324,6 +324,7 @@ void setup() {
     FastLED.show();
     delayMicroseconds(500);
   }
+  */
   FastLED.setDither(0);
   FastLED.clear();
   FastLED.show();

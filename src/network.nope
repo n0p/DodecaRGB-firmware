@@ -5,7 +5,7 @@
 String DoW[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 String Months[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
-const char* NTP_SERVER = "ch.pool.ntp.org";
+const char* NTP_SERVER = "es.pool.ntp.org";
 const char& CONFIG_PORTAL_TIMEOUT = 180;  // seconds
 
 // Timezone config
