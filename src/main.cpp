@@ -253,21 +253,27 @@ void timerStatusMessage(){
 Ticker timer1;
 
 
-#define NUM_PARTICLES 10
+#define NUM_PARTICLES 12
 Particle *particles[NUM_PARTICLES];
+
 void wandering_particles(){
   for (int p=0; p<NUM_PARTICLES; p++){
     particles[p]->tick();
     // loop through path and light up LEDs a little bit with nblend
     int led = particles[p]->led_number;
-    nblend(leds[led], particles[p]->color, 500/particles[p]->hold_time);
+    nblend(leds[led], particles[p]->color, 300/particles[p]->hold_time);
   }
   for (int i=0; i<NUM_LEDS; i++){
     if (random(100)<10) continue;
-    leds[i].fadeToBlackBy(10);
+    leds[i].fadeToBlackBy(3);
   }
   FastLED.show();
   delay(2);
+}
+
+
+void drip_particles(){
+  // todo
 }
 
 
@@ -286,15 +292,22 @@ void setup() {
   FastLED.show();
   delay(300);
 
+
+  // init Points
+  for (int p=0; p < NUM_LEDS; p++){
+    points[p].find_nearest_leds();
+  }
+
   // init Blobs
   for (int b=0; b<NUM_BLOBS; b++){
     blobs[b] = new Blob();
     blobs[b]->color = CRGB(random(255), random(255), random(255));
   }
   // init Particles
+  int p_step = 280/NUM_PARTICLES;
   for (int p=0; p<NUM_PARTICLES; p++){
     particles[p] = new Particle();
-    particles[p]->color = CRGB(random(200), 100+random(150), random(200));
+    particles[p]->color = CHSV(p*p_step, 220, 200);
   }
 
   pinMode(0, INPUT_PULLUP);
@@ -308,22 +321,20 @@ void setup() {
     delay(50);
   }
 
-  #ifdef WIFI_ENABLED
-  // connect to wifi
-  bool config_wifi = (digitalRead(USER_BUTTON) == LOW);
-  bool connected = ConnectToWifi(config_wifi);
-  #else
-  bool connected = true;
-  #endif
+  if (WIFI_ENABLED == true){
+    bool config_wifi = (digitalRead(USER_BUTTON) == LOW);
+    bool connected = ConnectToWifi(config_wifi);
 
-  // flash green if connected, or red if not
-  for (int x=0; x<40; x++){
-    int level = 150 - abs(map(x, 0,  40, -150, 150));
-    CRGB c =  (connected ? CRGB(0,level,0) : CRGB(level,0,0));
-    FastLED.showColor(c);
-    FastLED.show();
-    delayMicroseconds(500);
+    // flash green if connected, or red if not
+    for (int x=0; x<40; x++){
+      int level = 150 - abs(map(x, 0,  40, -150, 150));
+      CRGB c =  (connected ? CRGB(0,level,0) : CRGB(level,0,0));
+      FastLED.showColor(c);
+      FastLED.show();
+      delayMicroseconds(500);
+    }
   }
+
   FastLED.setDither(0);
   FastLED.clear();
   FastLED.show();
@@ -369,5 +380,6 @@ void loop() {
   }
   if (mode==4){
     wandering_particles();
+    // drip_particles();
   }
 }
